@@ -287,7 +287,7 @@ def plot_spectrum_with_peaks_plotly(
         fig.update_xaxes(range=[f_min, f_max])
 
     fig.update_layout(
-        title="Spektrum mit Peaks",
+        title="Spectrum with Peaks",
         xaxis_title="Frequency",
         yaxis_title="Amplitude"
     )
