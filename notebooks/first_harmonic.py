@@ -296,46 +296,64 @@ def build_peak_families_robust(
 
     for gid, group in enumerate(groups):
 
-
         cluster_ids = group["clusters"]
+
+        # --------------------------------------------------
+        # f_rev aus der bereits bestimmten Gruppe
+        # --------------------------------------------------
+
+        fundamental = group["harmonic_spacing"]
+
+        if not (
+            1.8e6 < fundamental < 2.1e6
+        ):
+            continue
 
 
         cluster_peaks = []
 
+
+        # --------------------------------------------------
+        # Peaks pro Cluster sammeln
+        # --------------------------------------------------
+
         for cid in cluster_ids:
 
-
             peaks = [
-                r for r in raw_peak_results
+                r
+                for r in raw_peak_results
                 if r["cluster_id"] == cid
             ]
 
-
             peaks = sorted(
                 peaks,
-                key=lambda x:x["peak_position"]
+                key=lambda x: x["peak_position"]
             )
 
-
             if len(peaks):
-
-                cluster_peaks.append(
-                    peaks
-                )
-
+                cluster_peaks.append(peaks)
 
 
         if len(cluster_peaks) < 2:
             continue
 
 
+        # --------------------------------------------------
+        # Nur Peak-Positionen verwenden, die in allen
+        # Clustern vorhanden sind
+        # --------------------------------------------------
+
         min_len = min(
             len(p)
             for p in cluster_peaks
         )
 
-        for peak_index in range(min_len):
 
+        # --------------------------------------------------
+        # Peak-Familien
+        # --------------------------------------------------
+
+        for peak_index in range(min_len):
 
             members = [
                 peaks[peak_index]
@@ -349,35 +367,17 @@ def build_peak_families_robust(
             ])
 
 
-            if len(freqs) < 3:
-                continue
+            # --------------------------------------------------
+            # Harmoniken relativ zur gemeinsamen f_rev
+            # --------------------------------------------------
+
+            harmonics = freqs / fundamental
 
 
-            diffs = np.diff(
-                np.sort(freqs)
-            )
-
-
-            fundamental = np.median(
-                diffs
-            )
-
-
-            if fundamental <= 0:
-                continue
-
-
-            harmonics = (
-                freqs / fundamental
-            )
-
-
-
-            for m,h in zip(
+            for m, h in zip(
                 members,
                 harmonics
             ):
-
 
                 f_peak = m["peak_position"]
 
@@ -394,19 +394,14 @@ def build_peak_families_robust(
 
                     "f_peak": f_peak,
 
-
-                    # NEU berechnet
                     "harmonic": h,
 
-
                     "fundamental": fundamental,
-
 
                     "folded_frequency":
                         f_peak / h
                         if h != 0
                         else np.nan,
-
 
                     "window": m["window"]
 
@@ -598,7 +593,7 @@ def plot_mean_peak_families_styled(
     print(peak_table)
 
     fig.update_layout(
-        title="Mean Peak Families (merged + valley-aware)",
+        title="Mean Peak Families",
         xaxis_title="Frequency (folded)",
         yaxis_title="Amplitude",
         template="plotly_white"

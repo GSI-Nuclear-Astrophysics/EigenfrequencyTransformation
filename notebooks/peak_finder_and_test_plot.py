@@ -272,7 +272,7 @@ def plot_spectrum_with_peaks_plotly(
         x=frequency,
         y=amplitude,
         mode="lines",
-        name="Spektrum"
+        name="Spectrum"
     ))
 
     fig.add_trace(go.Scatter(
