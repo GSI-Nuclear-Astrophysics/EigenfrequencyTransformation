@@ -337,68 +337,323 @@ def remove_edge_artifacts(
         amplitude[left:right+1]
     )
 
+import numpy as np
+
+
 def estimate_spectrum_parameters(
     frequency,
-    expected_frev=2.00e6,  # values for ESR- change if needed
-    frev_tolerance=0.10e6,  # values for ESR
+    amplitude,
+    expected_frev=2.00e6,
+    frev_tolerance=0.10e6,
     safety_margin=2
 ):
+
+    frequency = np.asarray(
+        frequency,
+        dtype=float
+    )
+
+    amplitude = np.asarray(
+        amplitude,
+        dtype=float
+    )
+
 
     f_min = np.min(frequency)
     f_max = np.max(frequency)
 
-    bandwidth = f_max - f_min
+    bandwidth = (
+        f_max - f_min
+    )
 
-    # number of possible repetitions 
+
+    frequency_step = np.median(
+        np.diff(frequency)
+    )
+
 
     min_repeats = max(
         3,
-        int(np.floor(bandwidth / (expected_frev + frev_tolerance)))
-    )
-    min_repeats = min_repeats-1
-    max_repeats = int(
-        np.ceil(
-            bandwidth /
-            (expected_frev - frev_tolerance)
+        int(
+            np.floor(
+                bandwidth /
+                (expected_frev + frev_tolerance)
+            )
         )
-    ) + safety_margin
+    )
 
-    # expected harmoincs
+    max_repeats = (
+        int(
+            np.ceil(
+                bandwidth /
+                (expected_frev - frev_tolerance)
+            )
+        )
+        +
+        safety_margin
+    )
 
     harmonic_min = int(
         np.floor(
-            (f_min /
-            (expected_frev + frev_tolerance))-5
+            f_min /
+            (expected_frev + frev_tolerance)
+            - 5
         )
     )
 
     harmonic_max = int(
         np.ceil(
-            (f_max /
-            (expected_frev - frev_tolerance))+5
+            f_max /
+            (expected_frev - frev_tolerance)
+            + 5
         )
     )
 
+    background_start = (
+        len(amplitude) // 4
+    )
 
-    print("="*60)
-    print("Automatic spectrum parameters")
-    print("="*60)
+    background_end = (
+        3 * len(amplitude) // 4
+    )
 
-    print(f"Spectrum range : {f_min/1e6:.3f} - {f_max/1e6:.3f} MHz")
-    print(f"Bandwidth      : {bandwidth/1e6:.3f} MHz")
+    background_region = amplitude[
+        background_start:
+        background_end
+    ]
+
+    background = np.median(
+        background_region
+    )
+
+    mad = np.median(
+        np.abs(
+            background_region
+            -
+            background
+        )
+    )
+
+    sigma_noise = (
+        1.4826 * mad
+    )
+
+    if sigma_noise <= 0:
+
+        q25, q75 = np.percentile(
+            background_region,
+            [25, 75]
+        )
+
+        sigma_noise = (
+            (q75 - q25)
+            /
+            1.349
+        )
+
+    noise_sigma_factor = 5.0
+
+    threshold_background = (
+        background
+        +
+        noise_sigma_factor *
+        sigma_noise
+    )
+
+    threshold_background = max(
+        threshold_background,
+        0.001 * np.max(amplitude)
+    )
+
+    prominence_noise_factor = 3.0
+
+    prominence_resonance = (
+        prominence_noise_factor
+        *
+        sigma_noise
+    )
+
+    relative_prominence = (
+        0.005
+        *
+        np.max(amplitude)
+    )
+
+    prominence_resonance = max(
+        prominence_resonance,
+        relative_prominence
+    )
+
+    distance_resonance = max(
+        3,
+        int(
+            round(
+                300 /
+                frequency_step
+            )
+        )
+    )
+
+    distance_resonance = min(
+        distance_resonance,
+        20
+    )
+
+
+    merge_background_points = max(
+        2,
+        int(
+            round(
+                120 /
+                frequency_step
+            )
+        )
+    )
+
+    merge_background_points = min(
+        merge_background_points,
+        10
+    )
+
+    print("=" * 70)
+    print("AUTOMATIC SPECTRUM PARAMETERS")
+    print("=" * 70)
+
     print()
-    print(f"Expected f_rev : {expected_frev/1e6:.3f} MHz")
-    print(f"Tolerance      : ±{frev_tolerance/1e6:.3f} MHz")
+    print("SPECTRUM")
+    print("-" * 70)
+
+    print(
+        f"Frequency range : "
+        f"{f_min/1e6:.3f} - "
+        f"{f_max/1e6:.3f} MHz"
+    )
+
+    print(
+        f"Frequency step  : "
+        f"{frequency_step:.2f} Hz"
+    )
+
+    print(
+        f"Bandwidth       : "
+        f"{bandwidth/1e6:.3f} MHz"
+    )
+
+    print(
+        f"Expected f_rev  : "
+        f"{expected_frev/1e6:.3f} MHz"
+    )
+
+    print(
+        f"Harmonics       : "
+        f"{harmonic_min} ... "
+        f"{harmonic_max}"
+    )
+
+    print(
+        f"Repeats         : "
+        f"{min_repeats} ... "
+        f"{max_repeats}"
+    )
+
     print()
-    print(f"Harmonics      : {harmonic_min} ... {harmonic_max}")
-    print(f"Repeats        : {min_repeats} ... {max_repeats}")
+    print("BACKGROUND / NOISE")
+    print("-" * 70)
+
+    print(
+        f"Background      : "
+        f"{background:.7f}"
+    )
+
+    print(
+        f"Noise sigma     : "
+        f"{sigma_noise:.7f}"
+    )
+
+    print(
+        f"Noise factor    : "
+        f"{noise_sigma_factor:.1f} sigma"
+    )
+
+    print(
+        f"Background thr. : "
+        f"{threshold_background:.7f}"
+    )
+
+    print()
+    print("PEAK FINDING")
+    print("-" * 70)
+
+    print(
+        f"Prominence      : "
+        f"{prominence_resonance:.7f}"
+    )
+
+    print(
+        f"Distance        : "
+        f"{distance_resonance} points"
+    )
+
+    print(
+        f"Merge points    : "
+        f"{merge_background_points}"
+    )
+
+    print("=" * 70)
 
     return {
-        "freq_min": expected_frev-frev_tolerance,
-        "freq_max": expected_frev+frev_tolerance,
-        "harmonic_min": harmonic_min,
-        "harmonic_max": harmonic_max,
-        "min_repeats": min_repeats,
-        "max_repeats": max_repeats
-    }
 
+        "freq_min":
+            expected_frev - frev_tolerance,
+
+        "freq_max":
+            expected_frev + frev_tolerance,
+
+        "frequency_step":
+            frequency_step,
+
+        "spectrum_min":
+            f_min,
+
+        "spectrum_max":
+            f_max,
+
+        "bandwidth":
+            bandwidth,
+
+        "expected_frev":
+            expected_frev,
+
+        "frev_tolerance":
+            frev_tolerance,
+
+        "harmonic_min":
+            harmonic_min,
+
+        "harmonic_max":
+            harmonic_max,
+
+        "min_repeats":
+            min_repeats,
+
+        "max_repeats":
+            max_repeats,
+
+        "background":
+            background,
+
+        "sigma_noise":
+            sigma_noise,
+
+        "threshold_background":
+            threshold_background,
+
+        "prominence_resonance":
+            prominence_resonance,
+
+        "distance_resonance":
+            distance_resonance,
+
+        "merge_background_points":
+            merge_background_points
+    }

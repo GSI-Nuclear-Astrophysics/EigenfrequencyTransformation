@@ -5,14 +5,17 @@ from scipy.signal import find_peaks
 def find_peaks_adaptive(
     frequency,
     amplitude,
-    prominence_resonance=0.003,
-    distance_resonance=10,
-    threshold_background=0.001,
-    merge_background_points=7,
+    prominence_resonance,
+    distance_resonance,
+    threshold_background,
+    merge_background_points,
     activity_window=300,
     activity_fraction=0.40
 ):
-    # rough estimation of peaks with find_peaks
+
+    # -------------------------------------------------------
+    # 1. Grobe Peaks bestimmen
+    # -------------------------------------------------------
 
     rough_peaks, props = find_peaks(
         amplitude,
@@ -60,9 +63,6 @@ def find_peaks_adaptive(
         mode="same"
     )
 
-
-    # resonance area
-
     center = np.argmax(activity)
 
     limit = activity_fraction * activity[center]
@@ -85,10 +85,6 @@ def find_peaks_adaptive(
 
     resonance_mask[left:right+1] = True
 
-
-
-    # peaks in the resonance area 
-
     resonance_indices = np.where(
         resonance_mask
     )[0]
@@ -104,10 +100,6 @@ def find_peaks_adaptive(
     peaks_res = resonance_indices[
         peaks_res_local
     ]
-
-
-
-    # peaks in the "background" (not resonance area)
 
     background_indices = np.where(
         ~resonance_mask
@@ -141,10 +133,6 @@ def find_peaks_adaptive(
         peaks_background,
         dtype=int
     )
-
-
-
-    # merging 
 
     def merge_peaks_fast(
         peaks,
@@ -210,10 +198,6 @@ def find_peaks_adaptive(
         merge_background_points
     )
 
-
-
-    # combined Peaks
-
     peaks_all = np.unique(
         np.concatenate(
             [
@@ -230,22 +214,26 @@ def find_peaks_adaptive(
         activity
     )
 
-
-
 def get_adaptive_peaks(
     frequency,
-    amplitude
+    amplitude,
+    prominence_resonance,
+    distance_resonance,
+    threshold_background,
+    merge_background_points,
+    activity_window=300,
+    activity_fraction=0.40
 ):
 
     peaks, resonance_mask, activity = find_peaks_adaptive(
         frequency,
         amplitude,
-        prominence_resonance=0.003,
-        distance_resonance=10,
-        threshold_background=0.001,
-        merge_background_points=7,
-        activity_window=300,
-        activity_fraction=0.40
+        prominence_resonance=prominence_resonance,
+        distance_resonance=distance_resonance,
+        threshold_background=threshold_background,
+        merge_background_points=merge_background_points,
+        activity_window=activity_window,
+        activity_fraction=activity_fraction
     )
 
 
@@ -253,6 +241,41 @@ def get_adaptive_peaks(
         np.asarray(peaks, dtype=int),
         resonance_mask,
         activity
+    )
+
+def build_peak_space(
+    frequency,
+    amplitude,
+    peaks,
+    activity
+):
+
+    peak_freqs = np.asarray(
+        frequency[peaks],
+        dtype=float
+    )
+
+    peak_amps = np.asarray(
+        amplitude[peaks],
+        dtype=float
+    )
+
+    peak_activity = np.asarray(
+        activity[peaks],
+        dtype=float
+    )
+
+
+    order = np.argsort(
+        peak_freqs
+    )
+
+
+    return (
+        peaks[order],
+        peak_freqs[order],
+        peak_amps[order],
+        peak_activity[order]
     )
 
 import plotly.graph_objects as go
