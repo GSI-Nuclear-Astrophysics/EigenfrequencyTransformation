@@ -372,16 +372,18 @@ def estimate_spectrum_parameters(
     )
 
 
-    min_repeats = max(
-        3,
-        int(
-            np.floor(
-                bandwidth /
-                (expected_frev + frev_tolerance)
-            )
-        )
-    )
+    # min_repeats = max(
+    #     3,
+    #     int(
+    #         np.floor(
+    #             bandwidth /
+    #             (expected_frev + frev_tolerance)
+    #         )
+    #     )
+    # )
 
+    min_repeats = 3
+    
     max_repeats = (
         int(
             np.ceil(

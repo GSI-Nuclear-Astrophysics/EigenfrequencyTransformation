@@ -81,3 +81,48 @@ def build_raw_spectrum_from_clusters(
 
     return spectrum
 
+def plot_spectrum_filtered(frequency, spectrum, selected_peaks,
+                           f_min=None, f_max=None):
+
+    import plotly.graph_objects as go
+    import numpy as np
+
+    mask = np.ones_like(frequency, dtype=bool)
+
+    if f_min is not None:
+        mask &= frequency >= f_min
+
+    if f_max is not None:
+        mask &= frequency <= f_max
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=frequency[mask],
+        y=spectrum[mask],
+        mode="lines",
+        name="Shape-normalized Spectrum"
+    ))
+
+    if selected_peaks is not None:
+
+        selected_peaks = np.asarray(selected_peaks)
+
+        peak_mask = np.isin(selected_peaks, np.where(mask)[0])
+
+        # fig.add_trace(go.Scatter(
+        #     x=frequency[selected_peaks][peak_mask],
+        #     y=spectrum[selected_peaks][peak_mask],
+        #     mode="markers",
+        #     marker=dict(color="red", size=6),
+        #     name="Peaks"
+        # ))
+
+    fig.update_layout(
+        title="Shape-normalized Spectrum",
+        xaxis_title="Frequency",
+        yaxis_title="Normalized Amplitude"
+    )
+
+    fig.show()
+
